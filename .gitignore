@@ -1,0 +1,14 @@
+# Local config and secrets
+config.local.*
+*.local.*
+.env
+
+# Raw exports and scan output (sanitise before committing anything from here)
+exports/
+output/
+scans/raw/
+
+# Editor and OS
+.vscode/
+Thumbs.db
+.DS_Store
