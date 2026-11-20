@@ -79,13 +79,39 @@ Ready to scan when `Administration > Feed Status` shows every feed as `Current`.
 | `Unable to allocate 6144 MB of RAM` | Static memory needs the full amount free at start | Shut DC01 down, close host apps, or drop to 4096 MB |
 | Paste doesn't work in the console | Basic Hyper-V session | `VM window > Clipboard > Type clipboard text` |
 | Feed download stalls | Host went to sleep | Host sleep off, charger in, Kali screen lock off during the sync |
-| `gvmd` or `ospd-openvas` crashes mid-scan | Out of RAM | Raise to 6 GB with host apps closed |
+| `gvmd` or `ospd-openvas` crashes mid-scan | Out of RAM | Close host apps, scan one host at a time |
+| Start is greyed out: "Feed is currently syncing" | After a reboot, `ospd-openvas` reloads the VTs into its cache (about 4 min) | Wait for `Finished loading VTs` in `/var/log/gvm/ospd-openvas.log` |
+| Admin password doesn't work after a change | Shell quoting, or UK/US keyboard mismatch in the console | Reset it, using letters, numbers and hyphens in single quotes (below) |
+| `sudo: unable to resolve host` after renaming | Hostname changed before `/etc/hosts` | Update the `127.0.1.1` line in `/etc/hosts` first, then `hostnamectl` |
+| DC01 won't start after applying a checkpoint | The checkpoint restores its saved state and its 4 GB memory setting | `Remove-VMSavedState`, then set memory again (below) |
+
+Reset the GVM admin password:
+
+```bash
+sudo runuser -u _gvm -- gvmd --user=admin --new-password='<password>'
+```
+
+Make DC01 fit after applying a checkpoint:
+
+```powershell
+# Host > PowerShell (admin)
+Stop-VM DC01 -TurnOff -Force -ErrorAction SilentlyContinue
+if ((Get-VM DC01).State -eq 'Saved') { Remove-VMSavedState -VMName DC01 }
+Set-VMMemory -VMName DC01 -DynamicMemoryEnabled $false -StartupBytes 2GB
+Start-VM DC01
+```
+
+Copy a report out of the VM (the basic Hyper-V console has no clipboard out):
+
+```bash
+cd ~/Downloads && python3 -m http.server 8000   # browse to http://<kali-ip>:8000 from the host, Ctrl+C when done
+```
 
 ## Status
 
-- KALI01 built and updated
-- GVM installed, feed sync running
-- Next: target DC01, unauthenticated scan of `Hardened DC` and `Clean DC`, then authenticated scans
+- KALI01 built and updated, hostname `kali01`
+- GVM installed, all feeds `Current`
+- Unauthenticated "after" scan done, "before" scan in progress: see [04 - Scan results](04-scan-results.md)
 
 ## Rollback
 

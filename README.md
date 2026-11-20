@@ -17,8 +17,11 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 |---|---|---|---|
 | 1 | DC01 build | Done | Lab |
 | 1 | Baseline hardening | Done | Lab |
-| 1 | Scanner VM (Kali + GVM) | In progress | Lab |
-| 1 | Before/after scans and write-up | Planned | - |
+| 1 | Scanner VM (Kali + GVM) | Done | Lab |
+| 1 | Unauthenticated scan, after (hardened) | Done | Lab |
+| 1 | Unauthenticated scan, before (clean) | In progress | Lab |
+| 1 | Print Spooler off on DC, rescan | Planned | - |
+| 1 | Authenticated scans and write-up | Planned | - |
 | 2 | Entra Connect sync to lab tenant | Planned | - |
 | 3 | Hybrid JML tests (in `entra-iam-automation`) | Planned | - |
 
@@ -26,10 +29,11 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 
 | VM | Role | OS | vCPU | RAM | Disk | IP |
 |---|---|---|---|---|---|---|
-| DC01 | Domain controller, DNS | Windows Server 2025 (evaluation) | 2 | 4 GB fixed | 60 GB | 192.0.2.10 |
-| KALI01 | Scanner, later attacker | Kali Linux (rolling) | 2 | 4 GB fixed | 60 GB | DHCP |
+| DC01 | Domain controller, DNS | Windows Server 2025 (evaluation) | 2 | 2 GB fixed | 60 GB | 192.0.2.10 |
+| KALI01 | Scanner, later attacker | Kali Linux (rolling) | 2 | 3-4 GB fixed | 60 GB | DHCP |
 
 - Both VMs are Generation 2 on a Hyper-V External switch.
+- The host has 16 GB. Both VMs only fit together with DC01 on 2 GB and Kali on 3-4 GB.
 - IPs in these docs use the `192.0.2.0/24` documentation range, not the real lab range.
 
 ## Docs
@@ -37,6 +41,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 1. [Build the DC](docs/01-build-dc.md)
 2. [Harden the DC](docs/02-hardening.md)
 3. [Build the scanner](docs/03-scanner.md)
+4. [Scan results](docs/04-scan-results.md)
 
 ## Checkpoints
 
