@@ -19,9 +19,11 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 1 | Baseline hardening | Done | Lab |
 | 1 | Scanner VM (Kali + GVM) | Done | Lab |
 | 1 | Unauthenticated scan, after (hardened) | Done | Lab |
-| 1 | Unauthenticated scan, before (clean) | In progress | Lab |
+| 1 | Unauthenticated scan, before (clean) | Done | Lab |
+| 1 | Authenticated scan, before (clean) | Done | Lab |
+| 1 | Authenticated scan, after (hardened) | In progress | Lab |
 | 1 | Print Spooler off on DC, rescan | Planned | - |
-| 1 | Authenticated scans and write-up | Planned | - |
+| 1 | Scan write-up and comparison | In progress | - |
 | 2 | Entra Connect sync to lab tenant | Planned | - |
 | 3 | Hybrid JML tests (in `entra-iam-automation`) | Planned | - |
 
@@ -49,9 +51,11 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 |---|---|---|
 | DC01 | `Clean DC` | Promoted DC, DNS forwarders, no hardening |
 | DC01 | `Hardened DC` | Baseline applied, rebooted, verified |
+| DC01 | `Clean DC - scan ready` | `Clean DC` plus the `svc-scan` account for authenticated scans |
+| DC01 | `Hardened DC - scan ready` | `Hardened DC` plus the `svc-scan` account for authenticated scans |
 | KALI01 | `Clean Kali` | Installed and updated, before GVM |
 
-The scans compare `Clean DC` (before) with `Hardened DC` (after).
+The scans compare the clean state (before) with the hardened state (after). Authenticated scans use the `scan ready` checkpoints.
 
 ## Lab vs production
 
