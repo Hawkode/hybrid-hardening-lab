@@ -81,6 +81,26 @@ Result: both GPOs applied, the domain answers and admin logon works.
 
 This is the "after" state for the scans.
 
+## Lab addition: Print Spooler off on DCs
+
+The baseline leaves Print Spooler running. Found in the scans: [04 - Scan results](04-scan-results.md).
+
+- `GPMC > hawkode.lab > Domain Controllers > right-click > Create a GPO in this domain, and Link it here > Lab - DC Disable Print Spooler`
+- `Edit > Computer Configuration > Policies > Windows Settings > Security Settings > System Services > Print Spooler > Define > Disabled`
+- Link it on the **Domain Controllers** OU, not the domain root, or every computer loses printing
+
+```powershell
+# DC01 > PowerShell (admin, elevated)
+gpupdate /force; Restart-Computer
+# after reboot
+Get-Service Spooler | Select-Object Status, StartType          # Stopped, Disabled
+gpresult /r /scope computer | Select-String 'Spooler'          # Lab - DC Disable Print Spooler
+```
+
+Checkpoint: `Hardened DC v2`.
+
+Rollback: remove the GPO link, `gpupdate /force`, then `Set-Service Spooler -StartupType Automatic; Start-Service Spooler`.
+
 ## Rollback
 
 - Unlink: `Remove-GPLink -Name "<gpo>" -Target "<dn>"`

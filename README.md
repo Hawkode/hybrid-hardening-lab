@@ -22,8 +22,9 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 1 | Unauthenticated scan, before (clean) | Done | Lab |
 | 1 | Authenticated scan, before (clean) | Done | Lab |
 | 1 | Authenticated scan, after (hardened) | Done | Lab |
-| 1 | Config check script (`Get-HardeningState.ps1`) | Written, first lab run pending | - |
-| 1 | Print Spooler off on DC, rescan | Planned | - |
+| 1 | Config check (`Get-HardeningState.ps1`), clean vs hardened | Done | Lab |
+| 1 | Print Spooler off on DC (GPO) | Done | Lab |
+| 1 | Authenticated scan, after v2 (Print Spooler off) | In progress | Lab |
 | 1 | Scan write-up and comparison | In progress | - |
 | 2 | Entra Connect sync to lab tenant | Planned | - |
 | 3 | Hybrid JML tests (in `entra-iam-automation`) | Planned | - |
@@ -60,6 +61,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | DC01 | `Hardened DC` | Baseline applied, rebooted, verified |
 | DC01 | `Clean DC - scan ready` | `Clean DC` plus the `svc-scan` account for authenticated scans |
 | DC01 | `Hardened DC - scan ready` | `Hardened DC` plus the `svc-scan` account for authenticated scans |
+| DC01 | `Hardened DC v2` | `Hardened DC - scan ready` plus the Print Spooler GPO |
 | KALI01 | `Clean Kali` | Installed and updated, before GVM |
 
 The scans compare the clean state (before) with the hardened state (after). Authenticated scans use the `scan ready` checkpoints.
