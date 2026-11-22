@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- `docs/05-entra-connect.md`: phase 2 prerequisites, test users, installer transfer, custom install settings, verification, gotchas, lab vs production
 - README with scope, phase status, lab layout and checkpoints
 - `docs/01-build-dc.md`: Server 2025 DC build, static IP, forest promotion, DNS forwarders
 - `docs/02-hardening.md`: Microsoft Security Baseline v2602 import, GPO links, what it changes, verification
@@ -17,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- README: phase 2 status, DC01 RAM in phase 2, `Pre-sync` and `Pre-Entra Connect` checkpoints, docs link
 - `docs/04-scan-results.md`: authenticated "after v2" results (Print Spooler gone from the network), config check with a hardened v2 column and v1.1 scores (clean 8, hardened 16, v2 17 of 19); phase 1 scans complete
 - README: phase 1 scan status done
 - `scripts/Get-HardeningState.ps1` 1.1: Server 2025 targets for LDAP signing and WDigest, LSA protection reads `RunAsPPLBoot` and checks LSASS live, audit settings accept "Success and Failure" where the target is "Success"

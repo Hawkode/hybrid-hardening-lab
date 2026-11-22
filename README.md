@@ -26,18 +26,19 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 1 | Print Spooler off on DC (GPO) | Done | Lab |
 | 1 | Authenticated scan, after v2 (Print Spooler off) | Done | Lab |
 | 1 | Scan write-up and comparison | Done | Lab |
-| 2 | Entra Connect sync to lab tenant | Planned | - |
+| 2 | Entra Connect install, scoped to `Lab Users` | Done | Lab |
+| 2 | Password hash sync test sign-in | In progress | Lab |
 | 3 | Hybrid JML tests (in `entra-iam-automation`) | Planned | - |
 
 ## Lab layout
 
 | VM | Role | OS | vCPU | RAM | Disk | IP |
 |---|---|---|---|---|---|---|
-| DC01 | Domain controller, DNS | Windows Server 2025 (evaluation) | 2 | 2 GB fixed | 60 GB | 192.0.2.10 |
+| DC01 | Domain controller, DNS, Entra Connect | Windows Server 2025 (evaluation) | 2 | 2 GB fixed (4 GB in phase 2) | 60 GB | 192.0.2.10 |
 | KALI01 | Scanner, later attacker | Kali Linux (rolling) | 2 | 3-4 GB fixed | 60 GB | DHCP |
 
 - Both VMs are Generation 2 on a Hyper-V External switch.
-- The host has 16 GB. Both VMs only fit together with DC01 on 2 GB and Kali on 3-4 GB.
+- The host has 16 GB. Both VMs only fit together with DC01 on 2 GB and Kali on 3-4 GB. In phase 2 Kali is off and DC01 gets 4 GB for Entra Connect.
 - IPs in these docs use the `192.0.2.0/24` documentation range, not the real lab range.
 
 ## Docs
@@ -46,6 +47,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 2. [Harden the DC](docs/02-hardening.md)
 3. [Build the scanner](docs/03-scanner.md)
 4. [Scan results](docs/04-scan-results.md)
+5. [Sync to Entra ID](docs/05-entra-connect.md)
 
 ## Scripts
 
@@ -62,12 +64,14 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | DC01 | `Clean DC - scan ready` | `Clean DC` plus the `svc-scan` account for authenticated scans |
 | DC01 | `Hardened DC - scan ready` | `Hardened DC` plus the `svc-scan` account for authenticated scans |
 | DC01 | `Hardened DC v2` | `Hardened DC - scan ready` plus the Print Spooler GPO |
+| DC01 | `Pre-sync` | `Hardened DC v2` minus `svc-scan` |
+| DC01 | `Pre-Entra Connect` | `Pre-sync` plus `Lab Users` OU, 4 test users, installer copied |
 | KALI01 | `Clean Kali` | Installed and updated, before GVM |
 
 The scans compare the clean state (before) with the hardened state (after). Authenticated scans use the `scan ready` checkpoints.
 
 ## Lab vs production
 
-- Entra Connect will run on DC01 to save RAM. In production it belongs on a dedicated member server, treated as Tier 0.
+- Entra Connect runs on DC01 to save RAM. In production it belongs on a dedicated member server, treated as Tier 0.
 - Reverting a DC checkpoint is safe here because there is one DC. In a multi-DC domain it causes USN rollback.
 - The evaluation licence lasts 180 days. This lab is built to be rebuilt.

@@ -114,3 +114,40 @@ Result: `Configuration complete`. Warnings shown: AD Recycle Bin not enabled, so
 |---|---|
 | `MSOL_xxxxxxxx` user in `CN=Users` | Has Replicate Directory Changes rights, the same rights DCSync abuses. Tier 0. Goes into the Attack phase. |
 | ADSync service and SQL LocalDB | The sync database holds the connector credentials. The Entra Connect server is Tier 0. |
+
+## Verify
+
+```powershell
+# DC01 > PowerShell (admin) - open a new window after the install, or the ADSync module isn't found
+Get-ADSyncScheduler | Select-Object SyncCycleEnabled, NextSyncCycleStartTimeInUTC   # True, next cycle in about 30 min
+Get-ADSyncConnectorRunStatus                                                        # empty = no sync running
+```
+
+`Entra admin center > Users > All users > Add filter > On-premises sync enabled = Yes`
+
+Result: 4 users found (`hy.alice`, `hy.ben`, `hy.chloe`, `hy.daniel` at `contoso.onmicrosoft.com`), all `On-premises sync: Yes`. Nothing else from AD.
+
+Still to prove: password hash sync, with a test sign-in using the AD password.
+
+## Gotchas
+
+| Problem | Cause | Fix |
+|---|---|---|
+| Edge: "This app has been blocked by your system administrator" | Hardened DC | Download on the host, `Copy-VMFile` into the VM |
+| `Get-ADSyncScheduler` not recognised | PowerShell window opened before the install | New window, or `Import-Module 'C:\Program Files\Microsoft Azure AD Sync\Bin\ADSync\ADSync.psd1'` |
+| Hyper-V cmdlets: "You do not have the required permission" | Window not elevated | Run PowerShell as administrator |
+| `.msi` not found under `$env:USERPROFILE` | Elevated window running as another account, or the command ran inside the VM | Use the full path, check `hostname` first |
+| `Copy-VMFile`: "The file exists" | The first copy already worked (no output = success) | Check the file on DC01 |
+
+## Lab vs production
+
+- Entra Connect runs on DC01 to save RAM. In production it goes on a dedicated, hardened member server treated as Tier 0.
+- Global Admin ran the wizard. In production: Hybrid Identity Administrator, through PIM, removed after.
+- No custom domain, so users get `onmicrosoft.com` UPNs. In production: verify the company domain first and fix UPN suffixes in AD before the first sync.
+- One OU in scope. In production: scope by OU, and test with a pilot OU before widening it.
+
+## Next
+
+- Test sign-in to prove password hash sync
+- Enable the AD Recycle Bin, then checkpoint `Post-sync`
+- Phase 3: joiner/mover/leaver tests with the hybrid scripts in `entra-iam-automation`
