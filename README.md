@@ -21,7 +21,8 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 1 | Unauthenticated scan, after (hardened) | Done | Lab |
 | 1 | Unauthenticated scan, before (clean) | Done | Lab |
 | 1 | Authenticated scan, before (clean) | Done | Lab |
-| 1 | Authenticated scan, after (hardened) | In progress | Lab |
+| 1 | Authenticated scan, after (hardened) | Done | Lab |
+| 1 | Config check script (`Get-HardeningState.ps1`) | Written, first lab run pending | - |
 | 1 | Print Spooler off on DC, rescan | Planned | - |
 | 1 | Scan write-up and comparison | In progress | - |
 | 2 | Entra Connect sync to lab tenant | Planned | - |
@@ -44,6 +45,12 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 2. [Harden the DC](docs/02-hardening.md)
 3. [Build the scanner](docs/03-scanner.md)
 4. [Scan results](docs/04-scan-results.md)
+
+## Scripts
+
+| Script | Runs on | What it does |
+|---|---|---|
+| [`Get-HardeningState.ps1`](scripts/Get-HardeningState.ps1) | DC01, elevated, Windows PowerShell 5.1 or 7 | Read-only. Shows the settings the baseline changes (SMB, LDAP, NTLM, WDigest, UAC, LSA, logging, audit policy, firewall, Print Spooler) against their targets. Run it on each checkpoint for a before/after table. |
 
 ## Checkpoints
 

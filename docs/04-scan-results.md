@@ -35,7 +35,7 @@ Each pair uses the same target and config. Only the DC01 checkpoint changes.
 | Unauthenticated after (hardened) | 20 Nov 2026 | 0 | 0 | 1 | 1 |
 | Unauthenticated before (clean) | 20 Nov 2026 | 0 | 0 | 1 | 1 |
 | Authenticated before (clean) | 21 Nov 2026 | 0 | 1 | 2 | 2 |
-| Authenticated after (hardened) | 21 Nov 2026 | Running | - | - | - |
+| Authenticated after (hardened) | 21 Nov 2026 | 0 | 1 | 2 | 2 |
 
 Log-level results (open ports, OS and service detection) are information only and left out.
 
@@ -105,17 +105,36 @@ Get-Service RemoteRegistry                                       # Running
 
 Proof the login worked: the results include local file checks (`C:\WINDOWS\system32\...`) that only run after a successful SMB login.
 
-## Authenticated before (clean): findings
+## Authenticated: before vs after
+
+Both states returned the same five findings. The baseline changed none of them.
 
 | Finding | CVSS | What GVM checked | Real risk | Decision |
 |---|---|---|---|---|
 | Windows IExpress Untrusted Search Path (CVE-2018-0598) | 7.8 High | `iexpress.exe` exists | Low. Only matters if someone runs a self-extracting archive from a folder an attacker can write to. | Accept. No patch, workaround only. Nobody builds or runs installers on the DC. |
 | Windows HID Functionality (Over USB) Code Execution (CVE-2011-0638) | 6.9 Medium | `hidserv.dll` exists | Close to none on a VM. Needs a physical USB device plugged in. | Accept on the VM. On physical servers: USB device control. |
 | DCE/RPC and MSRPC Services Enumeration Reporting | 5.0 Medium | Port 135 | Same as unauthenticated | Accept |
-| Windows Snipping Tool Information Disclosure (CVE-2023-28303) | 3.3 Low | File version | Likely false positive. GVM compares the Windows build number (`10.0.26100.x`) with the Windows 11 Store app version (`11.2302.20.0`). | Investigate, then add a GVM override if confirmed |
+| Windows Snipping Tool Information Disclosure (CVE-2023-28303) | 3.3 Low | File version | None. False positive: only the legacy `SnippingTool.exe` (`10.0.26100.1`) is present. The CVE affects the Store apps (Snip & Sketch, Windows 11 Snipping Tool), and neither is installed. | GVM override to False Positive |
 | TCP Timestamps Information Disclosure | 2.6 Low | - | Same as unauthenticated | Accept |
 
-The three findings logging in added are all file-presence or version checks. The baseline doesn't remove those files, so expect them in the hardened scan too.
+The three findings logging in added are all file-presence or version checks. The baseline doesn't remove those files.
+
+Snipping Tool check on DC01:
+
+```powershell
+(Get-Item "$env:windir\System32\SnippingTool.exe").VersionInfo.FileVersion   # 10.0.26100.1
+Get-AppxPackage -AllUsers *ScreenSketch* | Select-Object Name, Version         # nothing
+Get-AppxPackage -AllUsers *SnippingTool* | Select-Object Name, Version         # nothing
+```
+
+Override: `Scans > Overrides > New`, NVT OID `1.3.6.1.4.1.25623.1.0.836385`, host `192.0.2.10`, severity Any, new severity False Positive. GVM hides false positives unless the filter includes `levels=...f`.
+
+After triage, both states: 1 High, 2 Medium, 1 Low, 1 false positive.
+
+### What this shows
+
+- GVM finds missing patches and vulnerable software. The baseline changes configuration. The two don't overlap, so neither scan type shows the baseline's effect.
+- A vulnerability scan can't prove hardening. That takes a configuration check: [`Get-HardeningState.ps1`](../scripts/Get-HardeningState.ps1), run on each checkpoint.
 
 ## Gotchas
 
@@ -134,7 +153,6 @@ The three findings logging in added are all file-presence or version checks. The
 
 ## Next
 
-- Authenticated after (hardened) scan, then the before vs after comparison
-- Confirm or override the Snipping Tool finding
+- Config check on clean and hardened with `Get-HardeningState.ps1`
 - Disable Print Spooler by GPO, rescan as after v2
 - Remove `svc-scan`

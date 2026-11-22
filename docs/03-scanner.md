@@ -112,7 +112,7 @@ cd ~/Downloads && python3 -m http.server 8000   # browse to http://<kali-ip>:800
 - KALI01 built and updated, hostname `kali01`
 - GVM installed, all feeds `Current`
 - Unauthenticated before and after scans done
-- Authenticated "before" scan done, "after" scan in progress: see [04 - Scan results](04-scan-results.md)
+- Authenticated before and after scans done: see [04 - Scan results](04-scan-results.md)
 
 ## Rollback
 

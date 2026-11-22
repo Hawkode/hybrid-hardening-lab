@@ -12,8 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `docs/03-scanner.md`: Kali VM build, GVM install, feed timings, gotchas
 - `docs/04-scan-results.md`: scan method, unauthenticated "after" results, Print Spooler gap on the DC
 - `docs/04-scan-results.md`: unauthenticated before vs after comparison, authenticated scan setup (scan account, GVM credential and target), authenticated "before" findings with decisions, gotchas, lab vs production notes
+- `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- README: scripts section, config check status
+- `docs/04-scan-results.md`: authenticated "after" results (same as "before"), Snipping Tool finding confirmed as a false positive with a GVM override
 - README: authenticated scan status, `scan ready` checkpoints
 - `docs/03-scanner.md`: status
 - README: phase 1 status, VM memory sizing for a 16 GB host
