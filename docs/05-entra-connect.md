@@ -127,7 +127,25 @@ Get-ADSyncConnectorRunStatus                                                    
 
 Result: 4 users found (`hy.alice`, `hy.ben`, `hy.chloe`, `hy.daniel` at `contoso.onmicrosoft.com`), all `On-premises sync: Yes`. Nothing else from AD.
 
-Still to prove: password hash sync, with a test sign-in using the AD password.
+### Password hash sync
+
+- `InPrivate window > myaccount.microsoft.com > hy.alice@contoso.onmicrosoft.com` with the password set in AD
+- Result: the password was accepted and Entra moved on to "Let's keep your account secure" (MFA registration, from Conditional Access). That password only exists in AD, so password hash sync works.
+- Registration was cancelled. The test users don't need MFA methods yet.
+
+## AD Recycle Bin
+
+Entra Connect warns when it's off. It lets deleted users come back with all their attributes, which the leaver tests in Phase 3 rely on.
+
+```powershell
+# DC01 > PowerShell (admin)
+Enable-ADOptionalFeature 'Recycle Bin Feature' -Scope ForestOrConfigurationSet -Target 'hawkode.lab' -Confirm:$false
+Get-ADOptionalFeature 'Recycle Bin Feature' | Select-Object Name, EnabledScopes   # EnabledScopes lists the forest
+```
+
+⚠ It can't be turned off once enabled. In this lab, a checkpoint from before is the only way back.
+
+Checkpoint: `Post-sync`.
 
 ## Gotchas
 
@@ -148,6 +166,4 @@ Still to prove: password hash sync, with a test sign-in using the AD password.
 
 ## Next
 
-- Test sign-in to prove password hash sync
-- Enable the AD Recycle Bin, then checkpoint `Post-sync`
 - Phase 3: joiner/mover/leaver tests with the hybrid scripts in `entra-iam-automation`
