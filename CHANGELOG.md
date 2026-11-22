@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- `docs/05-entra-connect.md`: password hash sync proven with a test sign-in, AD Recycle Bin enabled
+- README: phase 2 done, `Post-sync` checkpoint
 - README: phase 2 status, DC01 RAM in phase 2, `Pre-sync` and `Pre-Entra Connect` checkpoints, docs link
 - `docs/04-scan-results.md`: authenticated "after v2" results (Print Spooler gone from the network), config check with a hardened v2 column and v1.1 scores (clean 8, hardened 16, v2 17 of 19); phase 1 scans complete
 - README: phase 1 scan status done

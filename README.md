@@ -27,7 +27,8 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 1 | Authenticated scan, after v2 (Print Spooler off) | Done | Lab |
 | 1 | Scan write-up and comparison | Done | Lab |
 | 2 | Entra Connect install, scoped to `Lab Users` | Done | Lab |
-| 2 | Password hash sync test sign-in | In progress | Lab |
+| 2 | Password hash sync test sign-in | Done | Lab |
+| 2 | AD Recycle Bin enabled | Done | Lab |
 | 3 | Hybrid JML tests (in `entra-iam-automation`) | Planned | - |
 
 ## Lab layout
@@ -66,6 +67,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | DC01 | `Hardened DC v2` | `Hardened DC - scan ready` plus the Print Spooler GPO |
 | DC01 | `Pre-sync` | `Hardened DC v2` minus `svc-scan` |
 | DC01 | `Pre-Entra Connect` | `Pre-sync` plus `Lab Users` OU, 4 test users, installer copied |
+| DC01 | `Post-sync` | Entra Connect installed and syncing `Lab Users`, AD Recycle Bin on |
 | KALI01 | `Clean Kali` | Installed and updated, before GVM |
 
 The scans compare the clean state (before) with the hardened state (after). Authenticated scans use the `scan ready` checkpoints.
