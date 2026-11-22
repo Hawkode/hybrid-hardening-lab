@@ -37,7 +37,7 @@ Each pair uses the same target and config. Only the DC01 checkpoint changes.
 | Unauthenticated before (clean) | 20 Nov 2026 | 0 | 0 | 1 | 1 |
 | Authenticated before (clean) | 21 Nov 2026 | 0 | 1 | 2 | 2 |
 | Authenticated after (hardened) | 21 Nov 2026 | 0 | 1 | 2 | 2 |
-| Authenticated after v2 (Print Spooler off) | 22 Nov 2026 | Running | - | - | - |
+| Authenticated after v2 (Print Spooler off) | 22 Nov 2026 | 0 | 1 | 2 | 2 |
 
 Log-level results (open ports, OS and service detection) are information only and left out.
 
@@ -66,8 +66,8 @@ Small differences in the RPC endpoint list are noise, not hardening:
 The RPC enumeration lists `spoolsv.exe` (Print Spooler) listening on DC01, before and after hardening. The Microsoft baseline doesn't stop it.
 
 - Risk: Print Spooler on a DC is the PrintNightmare path, and the "PrinterBug" lets any domain user force the DC to authenticate to a host they control (MITRE ATT&CK T1187, Forced Authentication).
-- Fix: disable the Print Spooler service on DCs by GPO, then rescan as "after v2".
-- The fix waits until all four scans are done, so the comparison stays baseline vs no baseline.
+- Fix: lab GPO `Lab - DC Disable Print Spooler` on the Domain Controllers OU ([02 - Harden the DC](02-hardening.md)), applied after the four baseline scans so that comparison stays baseline vs no baseline.
+- Result: the authenticated "after v2" scan no longer lists `spoolsv.exe` or the `spoolss` named pipe. Every earlier scan did. Same five findings otherwise.
 
 The same list shows the `MS NT Directory DRS Interface`. That's normal for a DC: it's how DCs replicate. It's also the interface a DCSync attack abuses, so it goes into the Attack phase.
 
@@ -140,32 +140,43 @@ After triage, both states: 1 High, 2 Medium, 1 Low, 1 false positive.
 
 ## Configuration check: before vs after
 
-[`Get-HardeningState.ps1`](../scripts/Get-HardeningState.ps1) v1.0 run on DC01 in each state, elevated, 22 Nov 2026. Raw values:
+[`Get-HardeningState.ps1`](../scripts/Get-HardeningState.ps1) run on DC01 in each state, elevated, 22 Nov 2026. Raw values:
 
-| Setting | Clean | Hardened | Changed by baseline |
-|---|---|---|---|
-| SMB server signing required | True | True | No, Server 2025 default |
-| SMB client signing required | True | True | No, Server 2025 default |
-| SMBv1 enabled | False | False | No, Server 2025 default |
-| LDAPServerIntegrity (legacy value) | 1 | 1 | No. Server 2025 enforces LDAP signing through the newer "LDAP server signing requirements Enforcement" policy |
-| LdapEnforceChannelBinding | Not set | 2 (always) | **Yes** |
-| LmCompatibilityLevel | Not set (OS default 3) | 5 (NTLMv2 only) | **Yes** |
-| NoLMHash | 1 | 1 | No |
-| WDigest UseLogonCredential | Not set | Not set | No. Off by default on Server 2025, and Microsoft removed it from the baseline |
-| LSA protection | Not set | `RunAsPPLBoot = 1`, but LSASS not protected | Configured, not active (see below) |
-| UAC FilterAdministratorToken | Not set | 1 | **Yes** |
-| PowerShell script block logging | Not set | 1 | **Yes** |
-| Audit: Credential Validation | Success | Success and Failure | **Yes** |
-| Audit: Kerberos Authentication Service | Success | Success and Failure | **Yes** |
-| Audit: Kerberos Service Ticket Operations | Success | **Failure** | **Yes, reduced** |
-| Audit: Directory Service Changes | No Auditing | Success | **Yes** |
-| Audit: Security Group Management | Success | Success | No |
-| Audit: User Account Management | Success | Success and Failure | **Yes** |
-| Audit subcategories with No Auditing | 43 | 30 | **Yes** |
-| Firewall profiles off | 0 | 0 | No |
-| Print Spooler start type | Automatic | Automatic | No |
+| Setting | Clean | Hardened | Hardened v2 | Changed by baseline |
+|---|---|---|---|---|
+| SMB server signing required | True | True | True | No, Server 2025 default |
+| SMB client signing required | True | True | True | No, Server 2025 default |
+| SMBv1 enabled | False | False | False | No, Server 2025 default |
+| LDAPServerIntegrity (legacy value) | 1 | 1 | 1 | No. Server 2025 enforces LDAP signing through the newer "LDAP server signing requirements Enforcement" policy |
+| LdapEnforceChannelBinding | Not set | 2 (always) | 2 | **Yes** |
+| LmCompatibilityLevel | Not set (OS default 3) | 5 (NTLMv2 only) | 5 | **Yes** |
+| NoLMHash | 1 | 1 | 1 | No |
+| WDigest UseLogonCredential | Not set | Not set | Not set | No. Off by default on Server 2025, and Microsoft removed it from the baseline |
+| LSA protection configured | Not set | `RunAsPPLBoot = 1` | `RunAsPPLBoot = 1` | **Yes** |
+| LSASS running protected | No | No | No | Configured, not active (see below) |
+| UAC FilterAdministratorToken | Not set | 1 | 1 | **Yes** |
+| PowerShell script block logging | Not set | 1 | 1 | **Yes** |
+| Audit: Credential Validation | Success | Success and Failure | Success and Failure | **Yes** |
+| Audit: Kerberos Authentication Service | Success | Success and Failure | Success and Failure | **Yes** |
+| Audit: Kerberos Service Ticket Operations | Success | **Failure** | **Failure** | **Yes, reduced** |
+| Audit: Directory Service Changes | No Auditing | Success | Success | **Yes** |
+| Audit: Security Group Management | Success | Success | Success | No |
+| Audit: User Account Management | Success | Success and Failure | Success and Failure | **Yes** |
+| Audit subcategories with No Auditing | 43 | 30 | 30 | **Yes** |
+| Firewall profiles off | 0 | 0 | 0 | No |
+| Print Spooler start type | Automatic | Automatic | **Disabled** | No, lab GPO in v2 |
 
-v1.0 scored clean 7 of 19 and hardened 13 of 19. v1.1 fixes three targets that were wrong for Server 2025 (legacy LDAP value, WDigest, the LSA protection value name) and accepts "Success and Failure" where the target is "Success".
+### Score (script v1.1, 19 scored checks)
+
+| State | At target |
+|---|---|
+| Clean | 8 of 19 |
+| Hardened (baseline) | 16 of 19 |
+| Hardened v2 (baseline + Print Spooler GPO) | 17 of 19 |
+
+- Hardened v2 is a live v1.1 run. Clean and hardened are v1.1 targets applied to the raw values above, which came from a v1.0 run (v1.0 scored them 7 and 13 of 19).
+- v1.1 fixed three targets that were wrong for Server 2025 (legacy LDAP value, WDigest, the LSA protection value name) and accepts "Success and Failure" where the target is "Success".
+- The two still failing in v2: LSASS not running protected, and Kerberos Service Ticket Operations audit at Failure only. Both are tracked below.
 
 ### What this shows
 
@@ -176,7 +187,7 @@ v1.0 scored clean 7 of 19 and hardened 13 of 19. v1.1 fixes three targets that w
 
 | Gap | Risk | Fix |
 |---|---|---|
-| Print Spooler running on the DC | PrintNightmare, PrinterBug (T1187) | Lab GPO `Lab - DC Disable Print Spooler`, see [02 - Harden the DC](02-hardening.md) |
+| Print Spooler running on the DC | PrintNightmare, PrinterBug (T1187) | **Fixed in v2.** Lab GPO `Lab - DC Disable Print Spooler`, see [02 - Harden the DC](02-hardening.md). Confirmed by the v2 scan and the config check. |
 | Kerberos Service Ticket Operations audit cut to Failure | Clean logs successful 4769 events and hardened doesn't. The baseline trims a noisy event and loses Kerberoasting (T1558.003) visibility. | Lab GPO setting it to Success and Failure, in the Detect phase |
 | LSA protection configured but not active | The GPO sets `Enabled with UEFI Lock` (`RunAsPPLBoot = 1`) and DC01 rebooted after, but an elevated admin can still read LSASS modules and there's no Wininit event 12. LSASS dumping (T1003.001) stays possible. | Cause not found yet. Prove it in the Attack phase with a dump attempt, then fix and recheck. |
 
@@ -207,8 +218,6 @@ Get-Process lsass -Module -ErrorAction Stop | Select-Object -First 1            
 
 ## Next
 
-- Authenticated after v2 scan (Print Spooler off), checkpoint `Hardened DC v2`
-- Rerun `Get-HardeningState.ps1` v1.1 on `Hardened DC v2`
 - Kerberos Service Ticket Operations audit to Success and Failure (Detect phase)
 - LSA protection: find out why it isn't active (Attack phase)
 - Remove `svc-scan`

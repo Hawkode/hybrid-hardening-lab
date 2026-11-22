@@ -24,8 +24,8 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 1 | Authenticated scan, after (hardened) | Done | Lab |
 | 1 | Config check (`Get-HardeningState.ps1`), clean vs hardened | Done | Lab |
 | 1 | Print Spooler off on DC (GPO) | Done | Lab |
-| 1 | Authenticated scan, after v2 (Print Spooler off) | In progress | Lab |
-| 1 | Scan write-up and comparison | In progress | - |
+| 1 | Authenticated scan, after v2 (Print Spooler off) | Done | Lab |
+| 1 | Scan write-up and comparison | Done | Lab |
 | 2 | Entra Connect sync to lab tenant | Planned | - |
 | 3 | Hybrid JML tests (in `entra-iam-automation`) | Planned | - |
 

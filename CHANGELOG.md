@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- `docs/04-scan-results.md`: authenticated "after v2" results (Print Spooler gone from the network), config check with a hardened v2 column and v1.1 scores (clean 8, hardened 16, v2 17 of 19); phase 1 scans complete
+- README: phase 1 scan status done
 - `scripts/Get-HardeningState.ps1` 1.1: Server 2025 targets for LDAP signing and WDigest, LSA protection reads `RunAsPPLBoot` and checks LSASS live, audit settings accept "Success and Failure" where the target is "Success"
 - README: config check and Print Spooler status, `Hardened DC v2` checkpoint
 - README: scripts section, config check status
