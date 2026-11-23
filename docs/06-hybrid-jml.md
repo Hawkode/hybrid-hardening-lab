@@ -10,7 +10,7 @@ Phase 3: run the hybrid scripts from [entra-iam-automation](https://github.com/H
 | 2 | Joiner | New AD user syncs to Entra, gets usage location and licence | Done |
 | 3 | Mover | Department and title change in AD, Entra follows, group membership follows | Done |
 | 4 | Leaver | Sign-in blocked, sessions revoked, licence removed | Done |
-| 5 | Source of authority | A Graph edit on a synced user fails cleanly | Planned |
+| 5 | Source of authority | A Graph edit on a synced user fails cleanly | Done |
 | 6 | Recycle Bin restore | Same `objectGUID`, the user syncs back | Planned |
 
 ## Test 1 - What the scripts need
@@ -314,6 +314,38 @@ Get-MgUser -UserId $upn -Property AccountEnabled, Department, AssignedLicenses, 
 
 The leftover access from test 3 is gone too.
 
+## Test 5 - Source of authority
+
+For a synced user, AD is the source of authority. The test checks that the cloud side refuses edits at two levels, the script guard and Graph itself, and that nothing changes.
+
+```powershell
+# DC01 > PowerShell 7 (admin) > C:\Scripts\entra-iam-automation
+$upn = 'harriet.cole@contoso.onmicrosoft.com'
+
+# 1. Cloud script against a synced user
+.\Cloud\Move-CloudUser.ps1 -UserPrincipalName $upn -Department IT
+
+# 2. Raw Graph edit of an AD-mastered attribute
+Update-MgUser -UserId $upn -Department 'IT'
+
+# 3. The other way: hybrid script against a cloud-only user
+.\Hybrid\Move-HybridUser.ps1 -UserPrincipalName 'oliver.bennett@contoso.onmicrosoft.com' -Department Finance -WhatIf
+
+# 4. Nothing changed
+Get-MgUser -UserId $upn -Property Department, OnPremisesSyncEnabled | Select-Object Department, OnPremisesSyncEnabled
+```
+
+| # | Attempt | Result |
+|---|---|---|
+| 1 | `Move-CloudUser.ps1` on synced Harriet | Stopped: `harriet.cole@contoso.onmicrosoft.com is synced from AD. Use the Hybrid script.` |
+| 2 | `Update-MgUser -Department` | Graph `400 Request_BadRequest`: `Unable to update the specified properties for on-premises mastered Directory Sync objects or objects currently undergoing migration.` |
+| 3 | `Move-HybridUser.ps1` on cloud-only Oliver | Stopped: `oliver.bennett@contoso.onmicrosoft.com not found in AD.` |
+| 4 | Harriet afterwards | Department still empty, `OnPremisesSyncEnabled` still `True` |
+
+The guard in 1 runs before any other check, so the disabled account didn't matter, and it gives a clear next step instead of a raw Graph error. Even without the guard, Graph refuses the change, as 2 shows. In 3 the hybrid script stops at the AD lookup, before it reaches Graph.
+
+Not every attribute is AD-mastered. Usage location and licences live only in the cloud, which is why the joiner sets them through Graph on a synced user. Department, title, manager and account state come from AD.
+
 ## Gotchas
 
 | Problem | Cause | Fix |
@@ -332,5 +364,6 @@ The leftover access from test 3 is gone too.
 - PowerShell 7 is the platform for the Graph SDK from here on. In production, install it on the management server before anything else.
 - Review lists for movers go to the new manager with a deadline. Unreviewed AD group access is how permissions pile up over the years.
 - The lab leaver has no mailbox. In production, convert the mailbox to shared with `-ConvertMailbox` and agree with HR who gets access.
+- Scripts that change users check the sync state first. In a tenant with both cloud-only and synced users, that guard stops the wrong tool being used on the wrong account.
 - Temporary passwords go to the manager through a one-time secret link, never email or chat.
 - `contoso.onmicrosoft.com` stands in for a verified company domain. In production the AD UPN suffix and the verified domain are the same real domain.

@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- `docs/06-hybrid-jml.md`: test 5 source of authority, script guard both ways and the Graph refusal
+- README: source of authority test done
 - `docs/06-hybrid-jml.md`: test 4 leaver, sync scope check, dry run, run, verification
 - README: leaver test done, `Pre-leaver` checkpoint
 - `docs/06-hybrid-jml.md`: test 3 mover, dry run, run, before/after table, dynamic group re-scope and leftover AD group access
