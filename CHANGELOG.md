@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- MIT licence, same as `entra-iam-automation`
+- `docs/06-hybrid-jml.md`: remaining options tested, `Get-StaleAccounts.ps1 -IncludeOnPrem` bug found and fixed, cloud leaver `-RemoveAuthMethods`
 - `docs/06-hybrid-jml.md`: retest after the `entra-iam-automation` fixes, verified-domain check and source-anchor lookup on a mismatched UPN
 - `docs/06-hybrid-jml.md`: audit trail, the phase 3 lifecycle as recorded in the Entra ID audit log
 - `docs/06-hybrid-jml.md`: phase 3 test plan, what the hybrid scripts need (parameters, modules, Graph scopes, Entra Connect access), UPN match gotcha, lab config

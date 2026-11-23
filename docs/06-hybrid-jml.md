@@ -444,6 +444,23 @@ Mover log line: `hy.alice@hawkode.lab signs in to Entra ID as hy.alice@contoso.o
 
 The joiner asked once for `User.Read` consent, to read the verified domains. Consent was for the admin only, not on behalf of the organisation.
 
+Released as `entra-iam-automation` v1.4.0.
+
+### Remaining options
+
+| Test | Result |
+|---|---|
+| `Get-StaleAccounts.ps1 -IncludeOnPrem`, after a network logon by `hy.alice` | **Bug.** The report looked up AD by the cloud UPN, found nothing for Alice, and flagged her `Stale` despite an AD logon minutes earlier. Same UPN mismatch as above, in a report this time |
+| Same, after the fix (AD matched by source anchor, one AD query) | Alice: `InAd True`, today's AD logon, `DaysSince 0`, no finding. Stale count 35 to 34 |
+| `Disable-CloudLeaver.ps1 -RemoveAuthMethods` on a new cloud user with a TAP and an email method | Both methods removed, sessions revoked, licence removed, no manual items |
+
+Released as `entra-iam-automation` v1.4.1.
+
+Gotchas from this round:
+- A user created seconds ago returns 403 or 404 from the authentication methods API until it replicates. Wait a few minutes.
+- Entra rejects phone numbers from the Ofcom drama range (`invalidPhoneNumber`). Use a TAP and an email method (`@example.com`) for test users instead of a real number.
+- The methods list lags a new method by a few seconds. Query the method's own endpoint to confirm it exists.
+
 ## Audit trail
 
 The same lifecycle, as Entra ID recorded it. `Entra admin center > Identity > Monitoring & health > Audit logs`, last 24 hours, target `harriet.cole`. Times are UTC (GMT in November).
