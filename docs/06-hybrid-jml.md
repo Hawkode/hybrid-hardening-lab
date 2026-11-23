@@ -74,6 +74,8 @@ So for tests 2-6:
 
 The joiner's suffix check also accepts the AD DNS root (`hawkode.lab`). With that as `DefaultDomain`, the check passes but the user lands in Entra under a different UPN, and the wait step can't find it.
 
+Both gaps are fixed in `entra-iam-automation` after this run, and retested live: see [Retest after the fixes](#retest-after-the-fixes).
+
 ### Lab config (hybrid keys, set before test 2)
 
 | Key | Lab value | Why |
@@ -418,6 +420,29 @@ All 6 tests passed. The hybrid scripts from `entra-iam-automation` work against 
 | Leaver | 23 seconds to a disabled, session-revoked, unlicensed cloud account |
 | Wrong tool, wrong user | Refused by the script guard and by Graph |
 | Accidental delete | Restored with the same AD and cloud identity |
+
+## Retest after the fixes
+
+The lab run turned up two gaps in the scripts (see [UPN match](#upn-match)). Both were fixed in `entra-iam-automation` commit `0440973`, then retested here the same evening on DC01, from a `Pre-v1.4.0-smoke` checkpoint.
+
+| # | Test | Result |
+|---|---|---|
+| 1 | Joiner `-WhatIf` with `DefaultDomain = 'hawkode.lab'` (the AD DNS root) | Stopped after sign-in, before any AD change: `'hawkode.lab' is not a verified domain in Entra ID ... Nothing was created.` The message lists the tenant's verified domains |
+| 2 | Mover `-WhatIf` on `hy.alice@hawkode.lab`, cloud UPN `hy.alice@contoso.onmicrosoft.com` | Matched by source anchor: AD `mS-DS-ConsistencyGuid` in Base64 equals the cloud `OnPremisesImmutableId`. Logged both UPNs. The old code stopped on this user |
+| 3 | Joiner, `mia.clarke` into HR | 18 seconds to a synced user with usage location `GB` and one licence |
+| 4 | Mover, HR to Finance with a new title | 17 seconds to synced department and title. "No manager" warning as expected |
+| 5 | Leaver, ticket `LAB-0005` | 18 seconds to disabled in AD and Entra, sessions revoked, licence removed, moved to Leavers, no manual items |
+
+```powershell
+# DC01 > PowerShell 7 (admin) > C:\Scripts\entra-iam-automation
+$ad = Get-ADUser -Filter "UserPrincipalName -eq 'hy.alice@hawkode.lab'" -Properties 'mS-DS-ConsistencyGuid'
+[Convert]::ToBase64String($ad.'mS-DS-ConsistencyGuid')     # equals OnPremisesImmutableId in Entra
+.\Hybrid\Move-HybridUser.ps1 -UserPrincipalName hy.alice@hawkode.lab -Department Finance -WhatIf
+```
+
+Mover log line: `hy.alice@hawkode.lab signs in to Entra ID as hy.alice@contoso.onmicrosoft.com (matched by source anchor).`
+
+The joiner asked once for `User.Read` consent, to read the verified domains. Consent was for the admin only, not on behalf of the organisation.
 
 ## Audit trail
 

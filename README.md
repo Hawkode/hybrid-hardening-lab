@@ -35,6 +35,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 3 | Leaver (`Disable-HybridLeaver.ps1`) | Done | Lab |
 | 3 | Source of authority: Graph edit on a synced user | Done | Lab |
 | 3 | AD Recycle Bin restore | Done | Lab |
+| 3 | Retest after script fixes (verified domain, source anchor) | Done | Lab |
 
 ## Lab layout
 
