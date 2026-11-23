@@ -7,7 +7,7 @@ Phase 3: run the hybrid scripts from [entra-iam-automation](https://github.com/H
 | # | Test | What proves it | Status |
 |---|---|---|---|
 | 1 | Prep: what the hybrid scripts need | Scripts, parameters, requirements and lab config listed | Done |
-| 2 | Joiner | New AD user syncs to Entra, gets usage location and licence | Planned |
+| 2 | Joiner | New AD user syncs to Entra, gets usage location and licence | Done |
 | 3 | Mover | Department and title change in AD, Entra follows, group membership follows | Planned |
 | 4 | Leaver | Sign-in blocked, sessions revoked, licence removed | Planned |
 | 5 | Source of authority | A Graph edit on a synced user fails cleanly | Planned |
@@ -84,9 +84,116 @@ The joiner's suffix check also accepts the AD DNS root (`hawkode.lab`). With tha
 | `LeaversOUInSyncScope` | `$true`, after checking Domain and OU filtering | |
 | `EntraConnectServer` | `DC01.hawkode.lab` | |
 | `ProtectedAdGroups` | `Domain Users` | |
-| `LicenseSkuPartNumber` | Picked in test 2 from `Get-MgSubscribedSku` | |
+| `LicenseSkuPartNumber` | `AAD_PREMIUM_P2` | The Entra ID P2 trial is the only SKU in the lab tenant |
+
+## Test 2 - Joiner
+
+### Setup
+
+Checkpoint first: `Pre-JML`.
+
+Copy the scripts and the config from the host. Only tracked files go in the zip, so the config goes separately.
+
+```powershell
+# Host > PowerShell 7 (admin)
+git -C C:\Repos\entra-iam-automation archive --format=zip -o "$env:TEMP\eia.zip" HEAD
+Copy-VMFile -Name DC01 -SourcePath "$env:TEMP\eia.zip" -DestinationPath 'C:\Scripts\eia.zip' -FileSource Host -CreateFullPath
+Copy-VMFile -Name DC01 -SourcePath 'C:\Repos\entra-iam-automation\config.local.psd1' -DestinationPath 'C:\Scripts\entra-iam-automation\config.local.psd1' -FileSource Host -CreateFullPath
+```
+
+```powershell
+# DC01 > PowerShell (admin)
+Expand-Archive C:\Scripts\eia.zip -DestinationPath C:\Scripts\entra-iam-automation -Force
+Get-ChildItem C:\Scripts\entra-iam-automation -Recurse | Unblock-File
+
+Set-ADForest -Identity hawkode.lab -UPNSuffixes @{Add = 'contoso.onmicrosoft.com'}
+'HR','Finance','Leavers' | ForEach-Object {
+    New-ADOrganizationalUnit -Name $_ -Path 'OU=Lab Users,DC=hawkode,DC=lab' }
+
+Install-PackageProvider NuGet -MinimumVersion 2.8.5.201 -Force
+Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Users, Microsoft.Graph.Users.Actions,
+    Microsoft.Graph.Identity.DirectoryManagement, Microsoft.Graph.Identity.Governance `
+    -Scope AllUsers -Repository PSGallery -Force
+
+# Graph fails on Windows PowerShell 5.1 here (see gotchas), so PowerShell 7
+iex "& { $(irm https://aka.ms/install-powershell.ps1) } -UseMSI -Quiet"
+```
+
+From here everything runs in PowerShell 7.6 (admin) on DC01. It finds the Graph modules in `C:\Program Files\WindowsPowerShell\Modules`, so no reinstall.
+
+Checks:
+
+| Check | Result |
+|---|---|
+| `(Get-ADForest).UPNSuffixes` | `contoso.onmicrosoft.com` |
+| OUs under `Lab Users` | `HR`, `Finance`, `Leavers` |
+| Graph modules | 5 modules, all `2.41.2` |
+| `Test-WSMan DC01.hawkode.lab` | Responds |
+| `Get-MgSubscribedSku` | `AAD_PREMIUM_P2` |
+
+Then the hybrid keys in `config.local.psd1`, as in the test 1 table.
+
+### Dry run
+
+```powershell
+# DC01 > PowerShell 7 (admin) > C:\Scripts\entra-iam-automation
+.\Hybrid\New-HybridJoiner.ps1 -GivenName Oliver -Surname Bennett -Department HR -JobTitle 'HR Advisor' -WhatIf
+```
+
+Stopped: `oliver.bennett@contoso.onmicrosoft.com already exists in Entra ID. Entra Connect would soft-match the new AD account onto it. Nothing was created.` A cloud-only user from earlier cloud tests had that UPN. The guard did its job: without it, Entra Connect would have linked the new AD account to the cloud account and taken it over.
+
+Second try, with a free name:
+
+```powershell
+.\Hybrid\New-HybridJoiner.ps1 -GivenName Harriet -Surname Cole -Department HR -JobTitle 'HR Advisor' -WhatIf
+```
+
+`What if: Create AD user in OU=HR,OU=Lab Users,DC=hawkode,DC=lab (HR), sync, set usage location, assign AAD_PREMIUM_P2`
+
+### Run
+
+```powershell
+.\Hybrid\New-HybridJoiner.ps1 -GivenName Harriet -Surname Cole -Department HR -JobTitle 'HR Advisor'
+```
+
+| Step | Time (UTC) | Result |
+|---|---|---|
+| AD user created | 18:52:25 | `harriet.cole` in `OU=HR,OU=Lab Users` |
+| Delta sync on DC01 | 18:52:43 | Completed (Success) |
+| Usage location | 18:52:44 | `GB` |
+| Licence | 18:52:45 | `AAD_PREMIUM_P2` |
+
+20 seconds from AD account to licensed user in Entra, with no manual steps. The run CSV (in `output\`, gitignored) has no passwords. The temporary password appears once in the console, and the user must change it at first sign-in.
+
+### Verify
+
+```powershell
+# DC01 > PowerShell 7 (admin)
+$upn = 'harriet.cole@contoso.onmicrosoft.com'
+Get-ADUser -Filter "UserPrincipalName -eq '$upn'" -Properties Department, Title |
+    Select-Object DistinguishedName, Department, Title, ObjectGUID
+Get-MgUser -UserId $upn -Property UserPrincipalName, OnPremisesSyncEnabled, UsageLocation, Department, JobTitle, AssignedLicenses |
+    Select-Object UserPrincipalName, OnPremisesSyncEnabled, UsageLocation, Department, JobTitle,
+        @{n='Licences';e={$_.AssignedLicenses.SkuId}}
+```
+
+Result: the AD user sits in the HR OU with department `HR` and title `HR Advisor`. In Entra: `OnPremisesSyncEnabled` is `True`, usage location is `GB`, department and title match AD, and there's one licence.
+
+`harriet.cole` carries on through the mover, leaver and restore tests.
+
+## Gotchas
+
+| Problem | Cause | Fix |
+|---|---|---|
+| Graph modules installed but `Get-Module -ListAvailable` shows nothing | DC01's `PSModulePath` has no Documents folder, so `-Scope CurrentUser` installs are invisible | `-Scope AllUsers` |
+| `Connect-MgGraph`: `Method 'RefreshCacheAsync' ... does not have an implementation` | Known assembly loading bug in Graph SDK 2.34+ on Windows PowerShell 5.1. Still there in 2.41.2, even in a clean session with Graph loaded first | PowerShell 7 on DC01. Microsoft is ending Graph SDK support on 5.1 |
+| `config.local.psd1 is not ready: DepartmentOUs is missing or empty` | Config copied from the cloud-only setup, hybrid keys still unset | Set the hybrid keys from the test 1 table |
+| Joiner: `already exists in Entra ID` | A cloud-only user with the same UPN | Pick a free name. This is the soft-match guard working |
+| AD cmdlets not recognised | DC01 commands run on the host by mistake | Run `hostname` first |
 
 ## Lab vs production
 
 - The scripts run on the DC to save RAM. In production they run from an admin workstation or management server, and Entra Connect sits on its own Tier 0 server.
+- PowerShell 7 is the platform for the Graph SDK from here on. In production, install it on the management server before anything else.
+- Temporary passwords go to the manager through a one-time secret link, never email or chat.
 - `contoso.onmicrosoft.com` stands in for a verified company domain. In production the AD UPN suffix and the verified domain are the same real domain.

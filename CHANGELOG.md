@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- `docs/06-hybrid-jml.md`: test 2 joiner setup, dry run (soft-match guard), run and verification, gotchas (module path, Graph on Windows PowerShell 5.1), PowerShell 7 on DC01
+- README: joiner test done, `Pre-JML` checkpoint
 - README: phase 3 split into one row per test, prep done, docs link
 - `docs/05-entra-connect.md`: password hash sync proven with a test sign-in, AD Recycle Bin enabled
 - README: phase 2 done, `Post-sync` checkpoint

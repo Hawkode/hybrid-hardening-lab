@@ -30,7 +30,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 2 | Password hash sync test sign-in | Done | Lab |
 | 2 | AD Recycle Bin enabled | Done | Lab |
 | 3 | Prep: what the hybrid scripts need | Done | Lab |
-| 3 | Joiner (`New-HybridJoiner.ps1`) | Planned | - |
+| 3 | Joiner (`New-HybridJoiner.ps1`) | Done | Lab |
 | 3 | Mover (`Move-HybridUser.ps1`) | Planned | - |
 | 3 | Leaver (`Disable-HybridLeaver.ps1`) | Planned | - |
 | 3 | Source of authority: Graph edit on a synced user | Planned | - |
@@ -74,6 +74,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | DC01 | `Pre-sync` | `Hardened DC v2` minus `svc-scan` |
 | DC01 | `Pre-Entra Connect` | `Pre-sync` plus `Lab Users` OU, 4 test users, installer copied |
 | DC01 | `Post-sync` | Entra Connect installed and syncing `Lab Users`, AD Recycle Bin on |
+| DC01 | `Pre-JML` | `Post-sync` before the phase 3 setup (UPN suffix, OUs, Graph modules, PowerShell 7) |
 | KALI01 | `Clean Kali` | Installed and updated, before GVM |
 
 The scans compare the clean state (before) with the hardened state (after). Authenticated scans use the `scan ready` checkpoints.
