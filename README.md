@@ -29,7 +29,12 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 2 | Entra Connect install, scoped to `Lab Users` | Done | Lab |
 | 2 | Password hash sync test sign-in | Done | Lab |
 | 2 | AD Recycle Bin enabled | Done | Lab |
-| 3 | Hybrid JML tests (in `entra-iam-automation`) | Planned | - |
+| 3 | Prep: what the hybrid scripts need | Done | Lab |
+| 3 | Joiner (`New-HybridJoiner.ps1`) | Planned | - |
+| 3 | Mover (`Move-HybridUser.ps1`) | Planned | - |
+| 3 | Leaver (`Disable-HybridLeaver.ps1`) | Planned | - |
+| 3 | Source of authority: Graph edit on a synced user | Planned | - |
+| 3 | AD Recycle Bin restore | Planned | - |
 
 ## Lab layout
 
@@ -49,6 +54,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 3. [Build the scanner](docs/03-scanner.md)
 4. [Scan results](docs/04-scan-results.md)
 5. [Sync to Entra ID](docs/05-entra-connect.md)
+6. [Hybrid joiner, mover, leaver tests](docs/06-hybrid-jml.md)
 
 ## Scripts
 

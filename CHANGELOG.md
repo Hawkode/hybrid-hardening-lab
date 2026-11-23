@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
+- `docs/06-hybrid-jml.md`: phase 3 test plan, what the hybrid scripts need (parameters, modules, Graph scopes, Entra Connect access), UPN match gotcha, lab config
 - `docs/05-entra-connect.md`: phase 2 prerequisites, test users, installer transfer, custom install settings, verification, gotchas, lab vs production
 - README with scope, phase status, lab layout and checkpoints
 - `docs/01-build-dc.md`: Server 2025 DC build, static IP, forest promotion, DNS forwarders
@@ -18,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- README: phase 3 split into one row per test, prep done, docs link
 - `docs/05-entra-connect.md`: password hash sync proven with a test sign-in, AD Recycle Bin enabled
 - README: phase 2 done, `Post-sync` checkpoint
 - README: phase 2 status, DC01 RAM in phase 2, `Pre-sync` and `Pre-Entra Connect` checkpoints, docs link
