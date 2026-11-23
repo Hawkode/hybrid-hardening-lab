@@ -419,6 +419,28 @@ All 6 tests passed. The hybrid scripts from `entra-iam-automation` work against 
 | Wrong tool, wrong user | Refused by the script guard and by Graph |
 | Accidental delete | Restored with the same AD and cloud identity |
 
+## Audit trail
+
+The same lifecycle, as Entra ID recorded it. `Entra admin center > Identity > Monitoring & health > Audit logs`, last 24 hours, target `harriet.cole`. Times are UTC (GMT in November).
+
+| Time | Activity | Status | Test |
+|---|---|---|---|
+| 18:52:39 | Add user, Update PasswordProfile | Success | 2 Joiner: created by the sync |
+| 18:52:44-45 | Update user, Change user license | Success | 2 Joiner: usage location and licence through Graph |
+| 18:52:54 | Add member to group | Success | 2 Joiner: `Dept-HR` dynamic rule |
+| 18:57:39 | Update user, Add member to group | Success | 3 Mover: department and title synced, `GG-HR-FileShare` synced |
+| 18:58:18-19 | Add member to group, Remove member from group | Success | 3 Mover: `Dept-Finance` in, `Dept-HR` out |
+| 19:05:33 | Update user, Disable account, Remove member from group | Success | 4 Leaver: synced from AD, `GG-HR-FileShare` removed |
+| 19:05:39 | Update StsRefreshTokenValidFrom, Update user, Change user license | Success | 4 Leaver: sessions revoked, licence removed |
+| 19:05:40 | Remove member from group | Success | 4 Leaver: `Dept-Finance` dynamic rule |
+| 19:17:52 | Update user | **Failure** (`PropertyUpdateNotAllowed`) | 5 Source of authority: the refused Graph edit |
+| 19:21:12 | Delete user | Success | 6 Restore: AD delete synced |
+| 19:22:58 | Restore user | Success | 6 Restore: same object back |
+
+Everything the scripts logged in the console shows up here, from Microsoft's side, including the refused edit in test 5.
+
+Gotcha: filter on **Activity: Delete user** to find the delete. A soft-deleted user's UPN gets its object ID in front, so a target filter of "starts with harriet.cole" misses that row.
+
 ## Gotchas
 
 | Problem | Cause | Fix |
