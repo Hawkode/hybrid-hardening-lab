@@ -31,7 +31,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 2 | AD Recycle Bin enabled | Done | Lab |
 | 3 | Prep: what the hybrid scripts need | Done | Lab |
 | 3 | Joiner (`New-HybridJoiner.ps1`) | Done | Lab |
-| 3 | Mover (`Move-HybridUser.ps1`) | Planned | - |
+| 3 | Mover (`Move-HybridUser.ps1`) | Done | Lab |
 | 3 | Leaver (`Disable-HybridLeaver.ps1`) | Planned | - |
 | 3 | Source of authority: Graph edit on a synced user | Planned | - |
 | 3 | AD Recycle Bin restore | Planned | - |

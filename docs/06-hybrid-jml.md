@@ -8,7 +8,7 @@ Phase 3: run the hybrid scripts from [entra-iam-automation](https://github.com/H
 |---|---|---|---|
 | 1 | Prep: what the hybrid scripts need | Scripts, parameters, requirements and lab config listed | Done |
 | 2 | Joiner | New AD user syncs to Entra, gets usage location and licence | Done |
-| 3 | Mover | Department and title change in AD, Entra follows, group membership follows | Planned |
+| 3 | Mover | Department and title change in AD, Entra follows, group membership follows | Done |
 | 4 | Leaver | Sign-in blocked, sessions revoked, licence removed | Planned |
 | 5 | Source of authority | A Graph edit on a synced user fails cleanly | Planned |
 | 6 | Recycle Bin restore | Same `objectGUID`, the user syncs back | Planned |
@@ -181,7 +181,64 @@ Result: the AD user sits in the HR OU with department `HR` and title `HR Advisor
 
 `harriet.cole` carries on through the mover, leaver and restore tests.
 
-## Gotchas
+## Test 3 - Mover
+
+Harriet moves from HR to Finance, with a new title.
+
+### Setup
+
+One AD group, so the review list has something to catch. It sits in the HR OU, inside the sync scope, so it also syncs to Entra.
+
+```powershell
+# DC01 > PowerShell 7 (admin) > C:\Scripts\entra-iam-automation
+$upn = 'harriet.cole@contoso.onmicrosoft.com'
+New-ADGroup -Name 'GG-HR-FileShare' -GroupScope Global -Path 'OU=HR,OU=Lab Users,DC=hawkode,DC=lab'
+Add-ADGroupMember 'GG-HR-FileShare' -Members (Get-ADUser -Filter "UserPrincipalName -eq '$upn'")
+(Get-MgUserMemberOf -UserId $upn -All).AdditionalProperties.displayName
+```
+
+Before: `Dept-HR` (dynamic group, rule on department).
+
+### Dry run
+
+```powershell
+.\Hybrid\Move-HybridUser.ps1 -UserPrincipalName $upn -Department Finance -JobTitle 'Finance Analyst' -WhatIf
+```
+
+- `What if: department 'HR' -> 'Finance', job title 'HR Advisor' -> 'Finance Analyst', move to OU=Finance,OU=Lab Users,DC=hawkode,DC=lab, delta sync`
+- Warning: no manager in AD, so the leaver will have nobody to hand the mailbox to
+- Review list (read-only, so it runs under `-WhatIf` too): `AD group: GG-HR-FileShare`
+
+### Run
+
+```powershell
+.\Hybrid\Move-HybridUser.ps1 -UserPrincipalName $upn -Department Finance -JobTitle 'Finance Analyst'
+```
+
+| Step | Time (UTC) | Result |
+|---|---|---|
+| AD change and OU move | 18:57:26 | Department, title, `OU=Finance,OU=Lab Users` |
+| Delta sync on DC01 | 18:57:43 | Completed (Success) |
+| Cloud check | 18:57:44 | User still in Entra (new OU is inside the sync scope) |
+| Review list | 18:57:44 | 1 item: `GG-HR-FileShare`, written to `output\` (gitignored) |
+
+### Verify
+
+```powershell
+Get-ADUser -Filter "UserPrincipalName -eq '$upn'" -Properties Department, Title | Select-Object DistinguishedName, Department, Title
+Get-MgUser -UserId $upn -Property Department, JobTitle | Select-Object Department, JobTitle
+(Get-MgUserMemberOf -UserId $upn -All).AdditionalProperties.displayName
+```
+
+| Check | Before | After |
+|---|---|---|
+| AD OU | `OU=HR,OU=Lab Users` | `OU=Finance,OU=Lab Users` |
+| Department (AD and Entra) | `HR` | `Finance` |
+| Title (AD and Entra) | `HR Advisor` | `Finance Analyst` |
+| Cloud groups | `Dept-HR` | `Dept-Finance`, `GG-HR-FileShare` |
+
+The dynamic groups re-scoped by themselves: `Dept-HR` out, `Dept-Finance` in. `GG-HR-FileShare` stayed, in AD and as a synced group in Entra. That's the leftover access the review list flags. The script lists it and leaves the decision to the new manager, because only a person knows whether Finance still needs that share.
+
 
 | Problem | Cause | Fix |
 |---|---|---|
@@ -189,11 +246,13 @@ Result: the AD user sits in the HR OU with department `HR` and title `HR Advisor
 | `Connect-MgGraph`: `Method 'RefreshCacheAsync' ... does not have an implementation` | Known assembly loading bug in Graph SDK 2.34+ on Windows PowerShell 5.1. Still there in 2.41.2, even in a clean session with Graph loaded first | PowerShell 7 on DC01. Microsoft is ending Graph SDK support on 5.1 |
 | `config.local.psd1 is not ready: DepartmentOUs is missing or empty` | Config copied from the cloud-only setup, hybrid keys still unset | Set the hybrid keys from the test 1 table |
 | Joiner: `already exists in Entra ID` | A cloud-only user with the same UPN | Pick a free name. This is the soft-match guard working |
+| `Get-MgGroup` not recognised | `Microsoft.Graph.Groups` isn't installed. The scripts don't need it | Install it only for ad-hoc checks |
 | AD cmdlets not recognised | DC01 commands run on the host by mistake | Run `hostname` first |
 
 ## Lab vs production
 
 - The scripts run on the DC to save RAM. In production they run from an admin workstation or management server, and Entra Connect sits on its own Tier 0 server.
 - PowerShell 7 is the platform for the Graph SDK from here on. In production, install it on the management server before anything else.
+- Review lists for movers go to the new manager with a deadline. Unreviewed AD group access is how permissions pile up over the years.
 - Temporary passwords go to the manager through a one-time secret link, never email or chat.
 - `contoso.onmicrosoft.com` stands in for a verified company domain. In production the AD UPN suffix and the verified domain are the same real domain.
