@@ -11,7 +11,7 @@ Phase 3: run the hybrid scripts from [entra-iam-automation](https://github.com/H
 | 3 | Mover | Department and title change in AD, Entra follows, group membership follows | Done |
 | 4 | Leaver | Sign-in blocked, sessions revoked, licence removed | Done |
 | 5 | Source of authority | A Graph edit on a synced user fails cleanly | Done |
-| 6 | Recycle Bin restore | Same `objectGUID`, the user syncs back | Planned |
+| 6 | Recycle Bin restore | Same `objectGUID`, the user syncs back | Done |
 
 ## Test 1 - What the scripts need
 
@@ -346,6 +346,79 @@ The guard in 1 runs before any other check, so the disabled account didn't matte
 
 Not every attribute is AD-mastered. Usage location and licences live only in the cloud, which is why the joiner sets them through Graph on a synced user. Department, title, manager and account state come from AD.
 
+## Test 6 - Recycle Bin restore
+
+Harriet is deleted in AD by mistake, then restored from the AD Recycle Bin. Pass: the same cloud account comes back, not a new one.
+
+Checkpoint: `Pre-restore`.
+
+### Before
+
+```powershell
+# DC01 > PowerShell 7 (admin)
+$upn   = 'harriet.cole@contoso.onmicrosoft.com'
+$guid  = (Get-ADUser -Filter "UserPrincipalName -eq '$upn'").ObjectGUID
+$cloud = Get-MgUser -UserId $upn -Property Id, OnPremisesImmutableId
+$guid; $cloud.Id; $cloud.OnPremisesImmutableId
+[Convert]::ToBase64String($guid.ToByteArray())     # equals OnPremisesImmutableId
+```
+
+The source anchor is the AD `objectGUID`: Base64 of it equals the cloud `OnPremisesImmutableId`. That link is what lets Entra Connect find the same cloud account again later.
+
+### Delete in AD and sync
+
+```powershell
+Remove-ADUser -Identity $guid -Confirm:$false
+Invoke-Command -ComputerName DC01.hawkode.lab { Start-ADSyncSyncCycle -PolicyType Delta }   # Success
+Start-Sleep 60
+Invoke-MgGraphRequest -Uri "v1.0/directory/deletedItems/$($cloud.Id)" | Select-Object displayName
+```
+
+Result: `Harriet Cole` is in Entra ID Deleted users (soft-deleted, kept for 30 days). The AD deletion flowed to the cloud in one sync.
+
+`Invoke-Command` runs the sync from PowerShell 7 through a Windows PowerShell remoting session, where the ADSync module loads. The hybrid scripts do it the same way.
+
+### Restore and sync
+
+```powershell
+Get-ADObject -Filter "objectGUID -eq '$guid'" -IncludeDeletedObjects | Restore-ADObject
+Invoke-Command -ComputerName DC01.hawkode.lab { Start-ADSyncSyncCycle -PolicyType Delta }   # Success
+Start-Sleep 60
+```
+
+### Verify
+
+```powershell
+Get-ADUser -Identity $guid -Properties Enabled | Select-Object ObjectGUID, DistinguishedName, Enabled
+Get-MgUser -UserId $cloud.Id -Property Id, UserPrincipalName, OnPremisesImmutableId, OnPremisesSyncEnabled, AccountEnabled |
+    Select-Object Id, UserPrincipalName, OnPremisesImmutableId, OnPremisesSyncEnabled, AccountEnabled
+```
+
+| Check | Before delete | After restore |
+|---|---|---|
+| AD `objectGUID` | `<guid>` | Same |
+| AD OU | `OU=Leavers,OU=Lab Users` | Same (restored to its last parent) |
+| AD enabled | `False` | `False` |
+| Entra object `Id` | `<object id>` | Same |
+| Entra `OnPremisesImmutableId` | Base64 of the `objectGUID` | Same |
+| Entra synced, enabled | `True`, `False` | `True`, `False` |
+
+Same `objectGUID` in AD, same object `Id` and `ImmutableId` in Entra. Entra Connect matched the restored AD object to the soft-deleted cloud account through the source anchor and brought that account back. The restore also kept the leaver state: disabled, in Leavers, no licence.
+
+A recreated account (a new `New-ADUser` with the same name) would get a new `objectGUID`. Entra Connect would then make a new cloud account, or soft-match by UPN, and the old object ID and its history would be lost. That's why the AD Recycle Bin was turned on in phase 2.
+
+## Result
+
+All 6 tests passed. The hybrid scripts from `entra-iam-automation` work against a real AD and Entra Connect setup:
+
+| Lifecycle step | AD change to cloud result |
+|---|---|
+| Joiner | 20 seconds to a synced, licensed user |
+| Mover | 18 seconds to synced attributes, dynamic groups re-scoped within minutes, leftover AD access listed |
+| Leaver | 23 seconds to a disabled, session-revoked, unlicensed cloud account |
+| Wrong tool, wrong user | Refused by the script guard and by Graph |
+| Accidental delete | Restored with the same AD and cloud identity |
+
 ## Gotchas
 
 | Problem | Cause | Fix |
@@ -356,6 +429,7 @@ Not every attribute is AD-mastered. Usage location and licences live only in the
 | Joiner: `already exists in Entra ID` | A cloud-only user with the same UPN | Pick a free name. This is the soft-match guard working |
 | `Get-MgGroup` not recognised | `Microsoft.Graph.Groups` isn't installed. The scripts don't need it | Install it only for ad-hoc checks |
 | `Get-ADSyncConnector` not recognised | Run in PowerShell 7 | Type `powershell` to drop into 5.1, `exit` to go back |
+| `Start-ADSyncSyncCycle` not recognised in PowerShell 7 | ADSync is a Windows PowerShell module | `Invoke-Command -ComputerName <sync server> { Start-ADSyncSyncCycle -PolicyType Delta }` |
 | AD cmdlets not recognised | DC01 commands run on the host by mistake | Run `hostname` first |
 
 ## Lab vs production
@@ -365,5 +439,6 @@ Not every attribute is AD-mastered. Usage location and licences live only in the
 - Review lists for movers go to the new manager with a deadline. Unreviewed AD group access is how permissions pile up over the years.
 - The lab leaver has no mailbox. In production, convert the mailbox to shared with `-ConvertMailbox` and agree with HR who gets access.
 - Scripts that change users check the sync state first. In a tenant with both cloud-only and synced users, that guard stops the wrong tool being used on the wrong account.
+- Accidental deletes: restore from the AD Recycle Bin, never recreate. A recreated account gets a new `objectGUID` and a new cloud identity.
 - Temporary passwords go to the manager through a one-time secret link, never email or chat.
 - `contoso.onmicrosoft.com` stands in for a verified company domain. In production the AD UPN suffix and the verified domain are the same real domain.

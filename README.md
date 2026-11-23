@@ -34,7 +34,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | 3 | Mover (`Move-HybridUser.ps1`) | Done | Lab |
 | 3 | Leaver (`Disable-HybridLeaver.ps1`) | Done | Lab |
 | 3 | Source of authority: Graph edit on a synced user | Done | Lab |
-| 3 | AD Recycle Bin restore | Planned | - |
+| 3 | AD Recycle Bin restore | Done | Lab |
 
 ## Lab layout
 
@@ -76,6 +76,7 @@ Only free tools: Hyper-V, Windows Server 2025 evaluation, Kali Linux, Greenbone 
 | DC01 | `Post-sync` | Entra Connect installed and syncing `Lab Users`, AD Recycle Bin on |
 | DC01 | `Pre-JML` | `Post-sync` before the phase 3 setup (UPN suffix, OUs, Graph modules, PowerShell 7) |
 | DC01 | `Pre-leaver` | Harriet Cole moved to Finance, before the leaver test |
+| DC01 | `Pre-restore` | Harriet Cole offboarded, before the delete and restore test |
 | KALI01 | `Clean Kali` | Installed and updated, before GVM |
 
 The scans compare the clean state (before) with the hardened state (after). Authenticated scans use the `scan ready` checkpoints.
