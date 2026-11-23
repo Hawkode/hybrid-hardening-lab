@@ -363,7 +363,7 @@ $guid; $cloud.Id; $cloud.OnPremisesImmutableId
 [Convert]::ToBase64String($guid.ToByteArray())     # equals OnPremisesImmutableId
 ```
 
-The source anchor is the AD `objectGUID`: Base64 of it equals the cloud `OnPremisesImmutableId`. That link is what lets Entra Connect find the same cloud account again later.
+The source anchor is `mS-DS-ConsistencyGuid`, which Entra Connect filled from the `objectGUID` on the first sync, so both hold the same value. Base64 of it equals the cloud `OnPremisesImmutableId`. That link is what lets Entra Connect find the same cloud account again later.
 
 ### Delete in AD and sync
 

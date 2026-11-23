@@ -46,4 +46,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `docs/03-scanner.md`: more gotchas (feed lock after reboot, password reset, hostname, checkpoint memory), status
 
 ### Fixed
+- `docs/06-hybrid-jml.md`: source anchor is `mS-DS-ConsistencyGuid` (filled from `objectGUID`), not `objectGUID` itself
 - `docs/06-hybrid-jml.md`: restored the Gotchas heading lost in the test 3 update
