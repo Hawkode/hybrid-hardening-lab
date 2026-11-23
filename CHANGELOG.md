@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `scripts/Get-HardeningState.ps1`: read-only config check of the settings the baseline changes, for before/after comparison
 
 ### Changed
+- `docs/06-hybrid-jml.md`: test 4 leaver, sync scope check, dry run, run, verification
+- README: leaver test done, `Pre-leaver` checkpoint
 - `docs/06-hybrid-jml.md`: test 3 mover, dry run, run, before/after table, dynamic group re-scope and leftover AD group access
 - README: mover test done
 - `docs/06-hybrid-jml.md`: test 2 joiner setup, dry run (soft-match guard), run and verification, gotchas (module path, Graph on Windows PowerShell 5.1), PowerShell 7 on DC01
@@ -37,3 +39,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `docs/03-scanner.md`: status
 - README: phase 1 status, VM memory sizing for a 16 GB host
 - `docs/03-scanner.md`: more gotchas (feed lock after reboot, password reset, hostname, checkpoint memory), status
+
+### Fixed
+- `docs/06-hybrid-jml.md`: restored the Gotchas heading lost in the test 3 update

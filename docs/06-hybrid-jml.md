@@ -9,7 +9,7 @@ Phase 3: run the hybrid scripts from [entra-iam-automation](https://github.com/H
 | 1 | Prep: what the hybrid scripts need | Scripts, parameters, requirements and lab config listed | Done |
 | 2 | Joiner | New AD user syncs to Entra, gets usage location and licence | Done |
 | 3 | Mover | Department and title change in AD, Entra follows, group membership follows | Done |
-| 4 | Leaver | Sign-in blocked, sessions revoked, licence removed | Planned |
+| 4 | Leaver | Sign-in blocked, sessions revoked, licence removed | Done |
 | 5 | Source of authority | A Graph edit on a synced user fails cleanly | Planned |
 | 6 | Recycle Bin restore | Same `objectGUID`, the user syncs back | Planned |
 
@@ -239,6 +239,82 @@ Get-MgUser -UserId $upn -Property Department, JobTitle | Select-Object Departmen
 
 The dynamic groups re-scoped by themselves: `Dept-HR` out, `Dept-Finance` in. `GG-HR-FileShare` stayed, in AD and as a synced group in Entra. That's the leftover access the review list flags. The script lists it and leaves the decision to the new manager, because only a person knows whether Finance still needs that share.
 
+## Test 4 - Leaver
+
+Harriet leaves. No `-ConvertMailbox`: the P2 trial has no Exchange plan, so there's no mailbox.
+
+### Sync scope check
+
+The Leavers OU decides the outcome. Inside the sync scope, the cloud account is disabled. Outside it, the sync deletes the cloud account (and its mailbox, if it had one).
+
+```powershell
+# DC01 > Windows PowerShell 5.1 (admin) - ADSync doesn't load in PowerShell 7
+$c = Get-ADSyncConnector | Where-Object ConnectorTypeName -eq 'AD'
+$c.Partitions.ConnectorPartitionScope.ContainerInclusionList   # OU=Lab Users,DC=hawkode,DC=lab
+$c.Partitions.ConnectorPartitionScope.ContainerExclusionList   # CN=LostAndFound, and the domain root
+```
+
+The domain root is excluded, but the more specific `Lab Users` inclusion wins, so `Leavers` is in scope. `LeaversOUInSyncScope` set to `$true`.
+
+Checkpoint: `Pre-leaver`.
+
+### Dry run
+
+```powershell
+# DC01 > PowerShell 7 (admin) > C:\Scripts\entra-iam-automation
+$upn = 'harriet.cole@contoso.onmicrosoft.com'
+.\Hybrid\Disable-HybridLeaver.ps1 -UserPrincipalName $upn -Ticket LAB-0004 -WhatIf
+```
+
+Plan: `AD: disable; reset password; remove from 1 AD group(s): GG-HR-FileShare; clear department 'Finance'; description 'Leaver 2026-11-23 LAB-0004 by administrator'; move to OU=Leavers,OU=Lab Users,DC=hawkode,DC=lab; delta sync; Entra: revoke sessions; remove direct licences`
+
+No cloud-only groups to remove: `Dept-Finance` is dynamic and drops when the department clears.
+
+### Run
+
+```powershell
+.\Hybrid\Disable-HybridLeaver.ps1 -UserPrincipalName $upn -Ticket LAB-0004
+```
+
+One confirmation prompt, after the plan.
+
+| Step | Time (UTC) | Result |
+|---|---|---|
+| AD: disable and password reset | 19:05:20 | Done |
+| AD: groups | 19:05:20 | Removed from `GG-HR-FileShare` |
+| AD: department, description, OU | 19:05:20 | Cleared, stamped, moved to `OU=Leavers,OU=Lab Users` |
+| Delta sync on DC01 | 19:05:38 | Completed (Success), account shows disabled in Entra |
+| Entra: sessions | 19:05:38 | Revoked |
+| Entra: licence | 19:05:39 | 1 direct licence removed |
+| Result | 19:05:39 | No manual items, CSV in `output\` (gitignored) |
+
+23 seconds from the first AD change to a blocked, unlicensed cloud account. The order matters: AD first, then sync, then Entra. With password hash sync, the cloud account accepts the old password until the sync shows it as disabled, so the script waits for that before the cloud steps.
+
+### Verify
+
+```powershell
+Get-ADUser -Filter "UserPrincipalName -eq '$upn'" -Properties Enabled, Department, Description, MemberOf |
+    Select-Object Enabled, DistinguishedName, Department, Description, @{n='Groups';e={$_.MemberOf.Count}}
+Get-MgUser -UserId $upn -Property AccountEnabled, Department, AssignedLicenses, SignInSessionsValidFromDateTime |
+    Select-Object AccountEnabled, Department, SignInSessionsValidFromDateTime, @{n='Licences';e={$_.AssignedLicenses.Count}}
+(Get-MgUserMemberOf -UserId $upn -All).AdditionalProperties.displayName
+```
+
+| Check | After |
+|---|---|
+| AD enabled | `False` |
+| AD OU | `OU=Leavers,OU=Lab Users` |
+| AD department | Empty |
+| AD description | `Leaver 2026-11-23 LAB-0004 by administrator` |
+| AD groups | 0 (Domain Users kept as primary group) |
+| Entra `AccountEnabled` | `False` |
+| Entra sessions valid from | 23 Nov 2026 19:05:38 |
+| Entra licences | 0 |
+| Entra groups | None: `GG-HR-FileShare` gone through the sync, `Dept-Finance` gone through the dynamic rule |
+
+The leftover access from test 3 is gone too.
+
+## Gotchas
 
 | Problem | Cause | Fix |
 |---|---|---|
@@ -247,6 +323,7 @@ The dynamic groups re-scoped by themselves: `Dept-HR` out, `Dept-Finance` in. `G
 | `config.local.psd1 is not ready: DepartmentOUs is missing or empty` | Config copied from the cloud-only setup, hybrid keys still unset | Set the hybrid keys from the test 1 table |
 | Joiner: `already exists in Entra ID` | A cloud-only user with the same UPN | Pick a free name. This is the soft-match guard working |
 | `Get-MgGroup` not recognised | `Microsoft.Graph.Groups` isn't installed. The scripts don't need it | Install it only for ad-hoc checks |
+| `Get-ADSyncConnector` not recognised | Run in PowerShell 7 | Type `powershell` to drop into 5.1, `exit` to go back |
 | AD cmdlets not recognised | DC01 commands run on the host by mistake | Run `hostname` first |
 
 ## Lab vs production
@@ -254,5 +331,6 @@ The dynamic groups re-scoped by themselves: `Dept-HR` out, `Dept-Finance` in. `G
 - The scripts run on the DC to save RAM. In production they run from an admin workstation or management server, and Entra Connect sits on its own Tier 0 server.
 - PowerShell 7 is the platform for the Graph SDK from here on. In production, install it on the management server before anything else.
 - Review lists for movers go to the new manager with a deadline. Unreviewed AD group access is how permissions pile up over the years.
+- The lab leaver has no mailbox. In production, convert the mailbox to shared with `-ConvertMailbox` and agree with HR who gets access.
 - Temporary passwords go to the manager through a one-time secret link, never email or chat.
 - `contoso.onmicrosoft.com` stands in for a verified company domain. In production the AD UPN suffix and the verified domain are the same real domain.
